@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+				xmlns:s="library://ns.adobe.com/flex/spark" 
+				xmlns:mx="library://ns.adobe.com/flex/mx" 
+				xmlns:c="*"
+				autoDrawBackground="true" maxHeight="120" creationComplete="itemrenderer1_creationCompleteHandler(event)">
+	<s:layout>
+		<s:HorizontalLayout verticalAlign="middle" padding="10"/>
+	</s:layout>
+	<fx:Script>
+		<![CDATA[
+			import flash.utils.setTimeout;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.DragEvent;
+			import mx.events.FlexEvent;
+			import mx.events.ItemClickEvent;
+			
+			import spark.components.List;
+			import spark.events.IndexChangeEvent;
+			import spark.events.TextOperationEvent;
+			[Bindable] private var index:int;
+			
+			[Bindable] private var resDP:ArrayCollection ;
+			
+			/* override public function set data(value:Object):void{
+				super.data = value;
+			} */
+			
+			protected function itemrenderer1_creationCompleteHandler(event:FlexEvent):void
+			{
+				trace ('data.resources ' + data.resources)
+				/* if (String (data.image).length < 5 || String (data.image) == "images/No_Image_Available.png") { 
+					search.visible = false;
+				}
+				trace ("create");
+				socDP = new ArrayCollection();
+				resDP = new ArrayCollection();
+				index = ((this.owner as List).dataProvider as ArrayCollection).getItemIndex(data);
+				var arr:Array = String(Copypaste.socSelected[index]).split(",");
+				for (var s:int = 0; s <  Copypaste.socials.length; s++) 
+				{
+					var socData:SocialData = Copypaste.socials.getItemAt(s) as SocialData;
+					for (var i:int = 0; i < arr.length; i++) 
+					{
+						if (s == arr[i]) {
+							socData.selected = true;
+						} else {
+							socData.selected = false;
+						}
+					}
+					socDP.addItem(socData);
+				}
+				
+				for (var j:int = 0; j < Copypaste.resources.length; j++) 
+				{
+					var resData:ResData = Copypaste.resources.getItemAt(j) as ResData;
+					if (resData.social == socData.uid) {
+						resDP.addItem(resData);
+					}
+				} */
+				
+				soc.selectedIndices = data.socials;
+				resDP = new ArrayCollection();
+				var arrSoc:Vector.<int> = data.socials as Vector.<int>;
+				var arrRes:Array = String(data.res).split(",");
+				
+				for (var j:int = 0; j < Copypaste.resources.length; j++) 
+				{
+					var resData:ResData = Copypaste.resources.getItemAt(j) as ResData;
+					for (var i:int = 0; i < arrSoc.length; i++) 
+					{
+						if (resData.social == arrSoc[i]) {
+							var rd:ResData = new ResData();
+							rd.uid = resData.uid;
+							rd.url = resData.url;
+							rd.name = resData.name;
+							resDP.addItem(rd);
+							for (var k:int = 0; k < arrRes.length; k++) 
+							{
+								if (rd.uid == arrRes[k]) {
+									rd.selected = true;
+								}
+							}
+						}
+					}
+				}
+				//res.selectedIndices = data.res;
+				/* for (var s:int = 0; s < data.socials.length; s++) 
+				{
+					var index:int = data.socials[s];
+					
+					for (var i:int = 0; i < Copypaste.resources.length; i++) 
+					{
+						var resData:ResData = Copypaste.resources.getItemAt(i) as ResData;
+						if (resData.social == Copypaste.socials.getItemAt(index).uid) {
+							if (resData.) {
+								
+							}
+							resDP.addItem(Copypaste.resources.getItemAt(i));
+						}
+					}
+				} */ 
+				
+				soc.addEventListener(ItemClickEvent.ITEM_CLICK, soc_itemClickHandler);
+				res.addEventListener(ItemClickEvent.ITEM_CLICK, res_itemClickHandler);
+			}
+			
+			private function searchByImage():void
+			{
+				search.scaleX = search.scaleY = 0.9; 
+				setTimeout(function ():void {search.scaleX = search.scaleY = 1;}, 100);
+				
+				var parentList:List = owner as List;
+				var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+				e.item = data;
+				e.index = parentList.dataProvider.getItemIndex(data);
+				e.label = "image";
+				dispatchEvent(e);
+			}
+			
+			private function preventDrag():void
+			{
+				
+				var parentList:List = owner as List;
+				var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+				e.item = data;
+				e.index = parentList.dataProvider.getItemIndex(data);
+				e.label = "drag";
+				dispatchEvent(e);
+			}
+			
+			/* protected function changeItem(event:IndexChangeEvent):void
+			{
+				needSave();
+				data.prior = prior.selectedIndex;
+			} */
+			
+			
+			
+			protected function soc_itemClickHandler(event:ItemClickEvent):void
+			{
+				if (event.label == 'selected') {
+					
+					/* var str:String = "";
+					for (var i:int = 0; i < soc.selectedIndices.length; i++) 
+					{
+						str += Copypaste.socials.getItemAt(soc.selectedIndices[i]).uid + ",";
+					} */
+					var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+					e.item = soc.selectedIndices;
+					e.label = "soc";
+					dispatchEvent(e);
+					createResDP();
+				}
+			}
+			
+			private function createResDP():void {
+				trace (soc.selectedIndices.length);
+				resDP = new ArrayCollection();
+				for (var i:int = 0; i < soc.selectedIndices.length; i++) 
+				{
+					for (var j:int = 0; j < Copypaste.resources.length; j++) 
+					{
+						var resData:ResData = Copypaste.resources.getItemAt(j) as ResData;
+						if (soc.selectedIndices[i] == resData.social) {
+							resDP.addItem(resData);
+						} 
+					}
+				}
+			}
+			
+			protected function res_itemClickHandler(event:ItemClickEvent):void
+			{
+				/* var str:String = "";
+				for (var i:int = 0; i < res.selectedIndices.length; i++) 
+				{
+					str += Copypaste.resources.getItemAt(res.selectedIndices[i]).uid + ",";
+				} */
+				if (event.label == 'selected') {
+					//data.resources[event.index].selected = event.item.selected;
+					//trace (data.resources[0].selected);
+					 var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+					 var arr:Array = new Array();
+					 for (var i:int = 0; i < res.selectedIndices.length; i++) 
+					 {
+						 arr.push((resDP.getItemAt(res.selectedIndices[i]) as ResData).uid);
+					 }
+					 
+					e.item = arr;
+					e.label = "res";
+					dispatchEvent(e);  
+					needSave();
+				}
+				
+			}
+			
+			protected function txt_changeHandler(event:TextOperationEvent):void
+			{
+				needSave();
+				data.text = txt.text;
+			}
+			
+			
+			
+			private function needSave():void
+			{
+				var parentList:List = owner as List;
+				var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+				e.item = data;
+				e.index = parentList.dataProvider.getItemIndex(data);
+				e.label = "needsave";
+				dispatchEvent(e);
+			}
+			
+			protected function image_clickHandler(event:MouseEvent):void
+			{
+				image.scaleX = image.scaleY = 0.9; 
+				setTimeout(function ():void {image.scaleX = image.scaleY = 1;}, 100);
+				
+				var file:File = new File();
+				file.addEventListener(Event.SELECT, onSelect);
+				file.browse([new FileFilter("Images", "*.jpg;*.jpeg;*.gif;*.png")]);
+			}
+			
+			private function onSelect(e:Event):void
+			{
+				var path:String = e.target.url;
+				image.source = path;
+				data.image = path;
+				needSave();
+			}
+			
+			protected function txt_mouseDownHandler(event:MouseEvent):void
+			{
+				var parentList:List = owner as List;
+				var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+				e.item = data;
+				e.index = parentList.dataProvider.getItemIndex(data);
+				e.label = "mousedown";
+				dispatchEvent(e);
+			}
+			
+			protected function soc_mouseUpHandler(event:MouseEvent):void
+			{
+				var parentList:List = owner as List;
+				var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+				e.item = data;
+				e.index = parentList.dataProvider.getItemIndex(data);
+				e.label = "mouseup";
+				dispatchEvent(e);
+			}
+			
+			
+			
+			
+			protected function soc_clickHandler(event:MouseEvent):void
+			{
+				
+				
+				var index:Number = soc.selectedIndex;
+				if (index == -1) {
+					return;
+				}
+			}
+			
+			public function deleteItem():void {
+				del.scaleX = del.scaleY = 0.9; 
+				setTimeout(function ():void {del.scaleX = del.scaleY = 1;}, 100);
+				
+				
+				var parentList:List = owner as List;
+				var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+				e.item = data;
+				e.label = "true";
+				dispatchEvent(e);
+				
+			}
+			
+			private function postNow():void
+			{
+				postnow.scaleX = postnow.scaleY = 0.9; 
+				setTimeout(function ():void {postnow.scaleX = postnow.scaleY = 1;}, 100);
+				
+				var parentList:List = owner as List;
+				var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+				e.item = data;
+				e.index = parentList.dataProvider.getItemIndex(data);
+				e.label = "postnow";
+				dispatchEvent(e);
+			}
+			
+		]]>
+	</fx:Script>
+	<c:CheckList id="soc" width="100%" maxWidth="280" height="100%" itemRenderer="miniSocIR" mouseDown="txt_mouseDownHandler(event)" mouseUp="soc_mouseUpHandler(event)"
+			dataProvider="{Copypaste.socials}" allowMultipleSelection="true" useVirtualLayout="true">
+		<c:layout>
+			<s:TileLayout requestedColumnCount="3" verticalAlign="top" padding="5"/>
+		</c:layout>
+	</c:CheckList>
+	<c:CheckList id="res" width="100%" height="100%" maxWidth="360" itemRenderer="DetailItemRenderer" dragEnter="preventDrag()" 
+				 dataProvider="{resDP}" mouseDown="txt_mouseDownHandler(event)"  mouseUp="soc_mouseUpHandler(event)">
+		<c:layout>
+			<s:VerticalLayout verticalAlign="top" gap="1" horizontalAlign="contentJustify" />
+		</c:layout>
+	</c:CheckList>
+	<s:TextArea id="txt" text="{data.text}" width="400" maxHeight="100" editable="true" dragEnter="preventDrag()" change="txt_changeHandler(event)" 
+				mouseDown="txt_mouseDownHandler(event)" mouseUp="soc_mouseUpHandler(event)"/>
+	<s:Image id="image" source="{data.image}" maxWidth="100" maxHeight="100" click="image_clickHandler(event)"/>
+	<s:VGroup>
+		<s:Image id="postnow" source="images/rocket.png"  click="postNow()"/>
+		<s:Image id="search" source="images/search.png"  click="searchByImage()"/>
+	</s:VGroup>
+	
+	<s:Image id="del" source="images/erase.png"  click="deleteItem()"/>
+</s:ItemRenderer>

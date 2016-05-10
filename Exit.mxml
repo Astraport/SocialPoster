@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" title="Выход из программы" creationComplete="titlewindow1_creationCompleteHandler(event)" >
+	<s:layout>
+		<s:VerticalLayout horizontalAlign="center"/>
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.events.FlexEvent;
+			
+			protected function closeBtn_clickHandler(event:MouseEvent):void
+			{
+				dispatchEvent(new Event("cancel"));
+			}
+			
+			protected function titlewindow1_creationCompleteHandler(event:FlexEvent):void
+			{
+				this.width  = this.parent.width * 0.6;
+				this.height = this.parent.height * 0.5;
+				this.closeButton.visible = false;
+			}
+			
+			protected function exitBtn_clickHandler(event:MouseEvent):void
+			{
+				dispatchEvent(new Event("exit"));
+			}
+			
+			protected function saveBtn_clickHandler(event:MouseEvent):void
+			{
+				dispatchEvent(new Event("save"));
+			}
+			
+		]]>
+	</fx:Script>
+	<s:VGroup width="100%" height="100%" verticalAlign="middle">
+		<s:Label text="У вас имеются не сохраненные посты." width="100%" height="100%" textAlign="center" verticalAlign="bottom"/>
+	</s:VGroup>
+	
+	<s:HGroup padding="50" height="10%">
+		<s:Button id="saveBtn" label="Сохранить и выйти" click="saveBtn_clickHandler(event)" width="200"/>
+		<s:Button id="exitBtn" label="Выйти без сохранения" click="exitBtn_clickHandler(event)" width="200"/>
+		<s:Button id="closeBtn" label="Отмена" click="closeBtn_clickHandler(event)" width="200"/>
+	</s:HGroup>
+	
+</s:TitleWindow>

@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+				xmlns:s="library://ns.adobe.com/flex/spark" 
+				xmlns:mx="library://ns.adobe.com/flex/mx" 
+				autoDrawBackground="true" creationComplete="itemrenderer1_creationCompleteHandler(event)" maxHeight="120">
+	<s:layout>
+		<s:HorizontalLayout verticalAlign="middle" padding="10"/>
+	</s:layout>
+	<fx:Declarations>
+		
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import flash.utils.setTimeout;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+			import mx.events.ItemClickEvent;
+			import mx.messaging.events.ChannelEvent;
+			
+			import spark.components.List;
+			import spark.components.WindowedApplication;
+			import spark.events.IndexChangeEvent;
+			import spark.events.TextOperationEvent;
+			
+			[Bindable] private var dp:ArrayCollection;
+			
+			
+				
+			private function deleteItem():void
+			{
+				del.scaleX = del.scaleY = 0.9; 
+				setTimeout(function ():void {del.scaleX = del.scaleY = 1;}, 100);
+				
+				var parentList:List = owner as List;
+				var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+				e.item = data;
+				e.index = parentList.dataProvider.getItemIndex(data);
+				e.label = "delete";
+				dispatchEvent(e);
+			}
+			protected function socName_changeHandler(event:TextOperationEvent):void
+			{
+				trace (socName.text);
+				data.name = socName.text;
+				dataChanges();
+			}
+			
+			
+			protected function urlChange(event:TextOperationEvent):void
+			{
+				data.url = url.text;
+				dataChanges();
+			}
+			
+			protected function tags_textInputHandler(event:TextOperationEvent):void
+			{
+				data.tags = tags.text;
+				dataChanges();
+			}
+			
+			protected function maxTags(event:Event):void
+			{
+				if (tagsmax.value < tagsmin.value) {
+					tagsmax.value = tagsmin.value;
+				}
+				data.maxtags = tagsmax.value;
+				dataChanges();
+			}
+			protected function minTags(event:Event):void
+			{
+				if (tagsmin.value > tagsmax.value) {
+					tagsmin.value = tagsmax.value;
+				}
+				data.mintags = tagsmin.value;
+				dataChanges();
+			}
+			
+			/* protected function maxPosts(event:Event):void
+			{
+				if (postsmax.value < postsmin.value) {
+					postsmax.value = postsmin.value;
+				}
+				data.maxposts = postsmax.value;
+				dataChanges();
+			}
+			protected function minPosts(event:Event):void
+			{
+				if (postsmin.value > postsmax.value) {
+					postsmin.value = postsmax.value;
+				}
+				data.minposts = postsmin.value;
+				dataChanges();
+			} */
+			
+			
+			protected function dataChanges():void
+			{
+				var parentList:List = owner as List;
+				var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+				e.label = "change";
+				dispatchEvent(e);
+			}
+			
+			protected function itemrenderer1_creationCompleteHandler(event:FlexEvent):void
+			{
+				dp = new ArrayCollection();
+				for (var i:int = 0; i < Copypaste.socials.length; i++) 
+				{
+					var obj:SocialData = Copypaste.socials.getItemAt(i) as SocialData;
+					if (i === data.social) {
+						social.selectedIndex = i;
+						obj.selected = true;
+					} else {
+						obj.selected = false;
+					}
+					dp.addItem(obj);
+				}
+				
+			}
+			
+			protected function social_changeHandler(event:IndexChangeEvent):void
+			{
+				for (var i:int = 0; i < dp.length; i++) 
+				{
+					if (i == social.selectedIndex) {
+						dp.getItemAt(i).selected = true;
+					} else {
+						dp.getItemAt(i).selected = false;
+					}
+				} 
+				trace ('social.selectedIndex ' + social.selectedIndex);
+				data.social = social.selectedIndex;
+				dataChanges();
+			}
+			
+		]]>
+	</fx:Script>
+	<s:VGroup width="100%" height="100%" verticalAlign="middle">
+		<s:Label width="100%" text="Название ресурса (не более 20 символов)*" textAlign="center"/>
+		<s:TextInput id="socName" width="100%" editable="true" text="{data.name}" change="socName_changeHandler(event)"/>
+		<s:Label width="100%" text="URL на ресурс*" textAlign="center"/>
+		<s:TextInput id="url" width="100%" editable="true" text="{data.url}" change="urlChange(event)"/>
+	</s:VGroup>
+	<s:VGroup width="100%" height="100%" verticalAlign="middle">
+		<s:Label width="100%" text="Социальная сеть*" textAlign="center"/>
+		<s:List id="social" width="100%" height="100%" dataProvider="{dp}" change="social_changeHandler(event)">
+			<s:layout>
+				<s:TileLayout requestedColumnCount="3" verticalAlign="top" padding="5"/>
+			</s:layout>
+			<s:itemRenderer>
+				<fx:Component>
+					<s:ItemRenderer>
+						<s:layout>
+							<s:HorizontalLayout verticalAlign="middle" padding="5"/>
+						</s:layout>
+						<s:states>
+							<s:State name="normal"/>
+							<s:State name="selected"/>
+						</s:states>
+						<s:Image id="icon" source.normal="images/dark-red-circle.png" source.selected="images/dark-green-circle.png"/>
+						<s:Image source="{'images/socialicons/' + data.icon}"/>
+						<s:Label text="{data.label}"/>
+					</s:ItemRenderer>
+				</fx:Component>
+			</s:itemRenderer>
+		</s:List>
+	</s:VGroup>
+	<s:VGroup width="100%" height="100%" verticalAlign="middle">
+		<s:Label width="100%" text="Теги. Разделитель #" textAlign="center"/>
+		<s:TextArea id="tags" width="200%" height="100%" text="{data.tags}" editable="true" change="tags_textInputHandler(event)"/>
+	</s:VGroup>
+	<s:VGroup width="50%" height="100%" verticalAlign="middle" horizontalAlign="left">
+		<s:Label width="100%" text="Tэгов от и до." textAlign="center"/>
+		<s:HGroup width="100%" verticalAlign="bottom" horizontalAlign="left">
+			<s:Label width="50%" text="Min" textAlign="right"/>
+			<s:NumericStepper id="tagsmin" value="{data.mintags}" minimum="0" maximum="25" change="minTags(event)"/>
+		</s:HGroup>
+		<s:HGroup width="100%" verticalAlign="bottom" horizontalAlign="left">
+			<s:Label width="50%" text="Max" textAlign="right"/>
+			<s:NumericStepper id="tagsmax" value="{data.maxtags}" minimum="0" maximum="30" change="maxTags(event)"/>
+		</s:HGroup>
+	</s:VGroup>
+	<!--<s:VGroup width="50%" height="100%" verticalAlign="middle" paddingRight="20">
+		<s:Label width="100%" text="Постов в сутки" textAlign="center"/>
+		<s:HGroup width="100%" verticalAlign="bottom">
+			<s:NumericStepper id="postsmin" value="{data.minposts}" minimum="1" maximum="100" change="minPosts(event)"/>
+			<s:Label width="100%" text=" - " textAlign="center"/>
+			<s:NumericStepper id="postsmax" value="{data.maxposts}" minimum="1" maximum="100" change="maxPosts(event)"/>
+		</s:HGroup>
+	</s:VGroup>-->
+	<s:Image id="del" source="images/erase.png"  click="deleteItem()"/>
+</s:ItemRenderer>

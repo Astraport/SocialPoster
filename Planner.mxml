@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" title="Планировщик" creationComplete="titlewindow1_creationCompleteHandler(event)"
+			   close="closeBtn_clickHandler(event)">
+	<s:layout>
+		<s:VerticalLayout horizontalAlign="center" padding="10"/>
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.events.ItemClickEvent;
+			import mx.events.ResizeEvent;
+			import mx.managers.PopUpManager;
+			import mx.utils.UIDUtil;
+			
+			import spark.components.Alert;
+			import spark.components.WindowedApplication;
+			private var selectStmt:SQLStatement;
+						
+			protected function closeBtn_clickHandler(event:CloseEvent):void
+			{
+				PopUpManager.removePopUp(this);
+			}
+			
+			protected function titlewindow1_creationCompleteHandler(event:FlexEvent):void
+			{
+				this.width = this.parent.width;
+				this.height = this.parent.height;
+				this.closeButton.visible = true;
+				list.addEventListener(ItemClickEvent.ITEM_CLICK, lst_itemClickHandler);
+			}
+			
+			
+			protected function lst_itemClickHandler(evt:ItemClickEvent):void {
+				if (evt.label == 'change') {
+					saveBtn.label = "Сохранить";
+					saveBtn.setStyle("icon", "images/dark-red-circle.png");
+					return;
+				}
+				if (evt.label == 'delete') {
+					deleteRow (evt.item);
+				}
+			}
+			
+			private function deleteRow(item:Object):void
+			{
+				selectStmt = new SQLStatement();
+				selectStmt.sqlConnection = Copypaste.loadData.conn;
+				selectStmt.text = "DELETE FROM planner WHERE `uid` = '" + item.uid + "'";
+				selectStmt.execute();
+				
+				Copypaste.planner.removeItem(item);
+			}
+			
+			protected function addBtn_clickHandler(event:MouseEvent):void
+			{
+				var obj:PlanData = new PlanData();
+				obj.uid = UIDUtil.createUID();
+				obj.hour = 15;
+				obj.min = 30;
+				Copypaste.planner.addItem(obj);
+				saveBtn.label = "Сохранить";
+				saveBtn.setStyle("icon", "images/dark-red-circle.png");
+			}
+			
+			protected function saveBtn_clickHandler(event:MouseEvent):void
+			{
+				selectStmt = new SQLStatement();
+				selectStmt.sqlConnection = Copypaste.loadData.conn;
+				var sql:String = "DELETE FROM planner";
+				selectStmt.text = sql;
+				selectStmt.addEventListener(SQLEvent.RESULT, selectRes);
+				selectStmt.addEventListener(SQLErrorEvent.ERROR, selectError);
+				selectStmt.execute();
+			}
+			
+			protected function selectRes(event:SQLEvent):void
+			{
+				selectStmt.removeEventListener(SQLEvent.RESULT, selectRes);
+				selectStmt.removeEventListener(SQLErrorEvent.ERROR, selectError);
+				
+				
+				for (var i:int = Copypaste.planner.length-1; i >= 0; i--) 
+				{
+					var item:PlanData =  Copypaste.planner.getItemAt(i) as PlanData;
+					selectStmt = new SQLStatement();
+					selectStmt.sqlConnection = Copypaste.loadData.conn;
+					var sql:String = "";
+					sql += "INSERT INTO planner (uid, hour, min) VALUES ('" + item.uid + "', '";
+					sql += item.hour+ "', '";
+					sql += 	item.min +	"')";
+					trace (sql);
+					selectStmt.text = sql;
+					selectStmt.execute();
+				}
+				
+				saveBtn.label = "Сохранить";
+				saveBtn.setStyle("icon", "images/dark-green-circle.png");
+			}
+			
+			protected function selectError(event:SQLErrorEvent):void
+			{
+				trace ('5 error ' + event.text);
+			}
+			
+			
+		]]>
+	</fx:Script>
+	<s:List id="list" width="100%" height="100%" dataProvider="{Copypaste.planner}" itemRenderer="timeIR">
+		<s:layout>
+			<s:TileLayout orientation="columns" verticalAlign="top" padding="5"/>
+		</s:layout>
+	</s:List>
+	<s:HGroup horizontalAlign="center">
+		
+		<s:Button id="addNew" label="Добавить ресурс" click="addBtn_clickHandler(event)" icon="images/add.png"/>
+		<s:Button id="saveBtn" label="Сохранить" click="saveBtn_clickHandler(event)" icon="images/dark-green-circle.png"/>
+		
+	</s:HGroup>
+</s:TitleWindow>

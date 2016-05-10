@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:ItemRenderer 
+	xmlns:fx="http://ns.adobe.com/mxml/2009" 
+	xmlns:s="library://ns.adobe.com/flex/spark" click="itemrenderer1_clickHandler(event)">
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.events.ItemClickEvent;
+			
+			import spark.components.List;
+			
+			protected function itemrenderer1_clickHandler(event:MouseEvent):void
+			{
+				/* if (this.selected) {
+					data.selected = true;
+				} else {
+					data.selected = false;
+				} */ 
+				 var parentList:List = owner as List;
+				var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+				e.item = {selected: selected};
+				e.index = parentList.dataProvider.getItemIndex(data);
+				e.label = "selected";
+				dispatchEvent(e);  
+			}
+			
+			 override public function set data(value:Object):void
+			{
+				super.data = value;
+				this.selected = value.selected;
+			} 
+			
+		]]>
+	</fx:Script>
+	
+	
+	<s:states>
+		<s:State name="normal"/>
+		<s:State name="hovered"/>
+		<s:State name="selected"/>
+	</s:states>
+	
+	<s:Rect top="0" left="0" right="0" bottom="0">
+		<s:fill>
+			<s:SolidColor id="backgroundColor" color="0xFFFFFF" color.selected="0xB4FFB4" />
+		</s:fill>
+	</s:Rect>
+	
+	<!-- checkmark -->
+	<s:Path data="M 3.5 6.5 l 2 2 l 6 -7" includeIn="selected" right="2" verticalCenter="1">
+		<s:stroke>
+			<s:SolidColorStroke weight="2" caps="square" color="0x00DD00" />
+		</s:stroke>
+	</s:Path>
+	<s:Path data="M 3.5 6.5 l 2 2 l 6 -7" right="3" verticalCenter="0">
+		<s:stroke>
+			<s:SolidColorStroke weight="2" caps="square" color.selected="0xFFFFFF" color.normal="0xf3f3f3" color.hovered="0x00AA00" />
+		</s:stroke>
+	</s:Path>
+	
+	<s:Label text="{data.name}" top="5" left="5" bottom="5" />
+	
+</s:ItemRenderer>

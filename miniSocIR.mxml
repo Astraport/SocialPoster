@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:ItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+				xmlns:s="library://ns.adobe.com/flex/spark" 
+				xmlns:mx="library://ns.adobe.com/flex/mx" 
+				autoDrawBackground="true" click="itemrenderer1_clickHandler(event)">
+	<s:layout>
+		<s:HorizontalLayout verticalAlign="middle" padding="5"/>
+	</s:layout>
+	<s:states>
+		<s:State name="normal"/>
+		<s:State name="selected"/>
+	</s:states>
+	<fx:Declarations>
+		
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import flash.utils.setTimeout;
+			
+			import mx.controls.listClasses.ListData;
+			import mx.events.FlexEvent;
+			import mx.events.ItemClickEvent;
+			
+			import spark.components.List;
+			
+			
+			
+			protected function itemrenderer1_clickHandler(event:MouseEvent):void
+			{
+				if (this.selected) {
+					data.selected = true;
+				} else {
+					data.selected = false;
+				}   
+				var parentList:List = owner as List;
+				var e:ItemClickEvent = new ItemClickEvent(ItemClickEvent.ITEM_CLICK, true);
+				e.item = data;
+				e.index = parentList.dataProvider.getItemIndex(data);
+				e.label = "selected";
+				dispatchEvent(e);  
+			}
+			
+		]]>
+	</fx:Script>
+	<s:CheckBox id="socCheck" selected.selected="true" selected.normal="false" mouseEnabled="false"/>
+	<s:Image source="{'images/socialicons/' + data.icon}"/>
+	<s:Label text="{data.label}"/>
+</s:ItemRenderer>

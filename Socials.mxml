@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" close="closeBtn_clickHandler(event)" title="Социальные сети" creationComplete="titlewindow1_creationCompleteHandler(event)">
+	<s:layout>
+		<s:VerticalLayout horizontalAlign="center" padding="10"/>
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import flash.utils.setTimeout;
+			
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.events.ItemClickEvent;
+			import mx.events.ResizeEvent;
+			import mx.managers.PopUpManager;
+			import mx.utils.UIDUtil;
+			
+			import spark.components.Alert;
+			import spark.components.WindowedApplication;
+			private var selectStmt:SQLStatement;
+			private var startIndex:int;
+						
+			protected function closeBtn_clickHandler(event:CloseEvent):void
+			{
+				PopUpManager.removePopUp(this);
+			}
+			
+			protected function titlewindow1_creationCompleteHandler(event:FlexEvent):void
+			{
+				this.width = this.parent.width;
+				this.height = this.parent.height;
+				startIndex = Copypaste.socials.length;
+				list.addEventListener(ItemClickEvent.ITEM_CLICK, lst_itemClickHandler);
+			}
+			
+			
+			protected function lst_itemClickHandler(evt:ItemClickEvent):void {
+				if (evt.label == 'change') {
+					saveBtn.label = "Сохранить";
+					saveBtn.setStyle("icon", "images/dark-red-circle.png");
+					return;
+				}
+				if (evt.label == 'delete') {
+					Alert.show("Удаление соц. сети приведет к удалению всех связанных с ней ресурсов. Удаляем?", "Предупреждение!", Alert.YES | Alert.CANCEL, null, 
+						function(event:CloseEvent):void{if(event.detail == Alert.YES) {deleteRow (evt.item, evt.index);}}, null, Alert.CANCEL)
+					
+				}
+			}
+			
+			private function deleteRow(item:Object, index:int):void
+			{
+				selectStmt = new SQLStatement();
+				selectStmt.sqlConnection = Copypaste.loadData.conn;
+				selectStmt.text = "DELETE FROM socials WHERE `uid` = '" + item.uid + "'";
+				selectStmt.execute();
+				
+				Copypaste.socials.removeItem(item);
+				
+				/* selectStmt = new SQLStatement();
+				selectStmt.sqlConnection = Copypaste.loadData.conn;
+				selectStmt.text = "DELETE FROM resources WHERE `social` = '" + index + "'";
+				selectStmt.execute();
+				
+				
+				
+				for (var i:int = 0; i < Copypaste.resources.length; i++) 
+				{
+					var resData:ResData = Copypaste.resources.getItemAt(i) as ResData;
+					if (resData.social == index) {
+						Copypaste.resources.removeItemAt(i);
+					}
+					resData.social = resData.social - 1;
+					selectStmt = new SQLStatement();
+					selectStmt.sqlConnection = Copypaste.loadData.conn;
+					selectStmt.text = "UPDATE resources SET social = '" + resData.social + "'";
+					selectStmt.execute();
+				} */
+			}
+			
+			protected function addBtn_clickHandler(event:MouseEvent):void
+			{
+				var obj:SocialData = new SocialData();
+				obj.uid = UIDUtil.createUID();
+				obj.icon = "empty.png";
+				obj.label = "";
+				obj.selected = false;
+				Copypaste.socials.addItemAt(obj, 0);
+				saveBtn.label = "Сохранить";
+				saveBtn.setStyle("icon", "images/dark-red-circle.png");
+			}
+			
+			protected function saveBtn_clickHandler(event:MouseEvent):void
+			{
+				for (var i:int = Copypaste.socials.length-1; i >= 0; i--) 
+				{
+					var item:Object= Copypaste.socials.getItemAt(i);
+					if (String (item.label).length < 1) {
+						Alert.show("Название соц. сети должно быть определено. Используйте двух-трехзначную аббревиатуру.", "Ошибка");
+						return;
+					}
+					if (String (item.label).length > 3) {
+						Alert.show("Не используйте аббревиатуру соц. сети длиннее 3-х символов.", "Ошибка");
+						return;
+					}
+					if (String (item.icon).length > 7) {
+						Alert.show("Иконка соц. сети должна быть определена. Используйте любую иконка из предложенного списка.", "Ошибка");
+						return;
+					}
+				}
+				selectStmt = new SQLStatement();
+				selectStmt.sqlConnection = Copypaste.loadData.conn;
+				var sql:String = "DELETE FROM socials";
+				selectStmt.text = sql;
+				selectStmt.addEventListener(SQLEvent.RESULT, selectRes);
+				selectStmt.addEventListener(SQLErrorEvent.ERROR, selectError);
+				selectStmt.execute();
+			}
+			
+			protected function selectRes(event:SQLEvent):void
+			{
+				selectStmt.removeEventListener(SQLEvent.RESULT, selectRes);
+				selectStmt.removeEventListener(SQLErrorEvent.ERROR, selectError);
+				
+				
+				for (var i:int = Copypaste.socials.length-1; i >= 0; i--) 
+				{
+					var item:Object= Copypaste.socials.getItemAt(i);
+					selectStmt = new SQLStatement();
+					selectStmt.sqlConnection = Copypaste.loadData.conn;
+					var sql:String = "INSERT INTO socials (uid, label, icon) VALUES ('" + item.uid + "', '" + item.label + "', '" + item.icon + "')";
+					
+					selectStmt.text = sql;
+					selectStmt.execute();
+				}
+				
+				 /* if (startIndex < Copypaste.socials.length) {
+					for (var j:int = 0; j < Copypaste.resources.length; j++) 
+					{
+						trace (startIndex + " insert " + Copypaste.socials.length + " insert " + Copypaste.resources.getItemAt(j).social);
+						Copypaste.resources.getItemAt(j).social = Copypaste.resources.getItemAt(j).social + (Copypaste.socials.length - startIndex);
+					}
+				}  */
+				saveBtn.label = "Сохранить";
+				saveBtn.setStyle("icon", "images/dark-green-circle.png");
+			}
+			
+			protected function selectError(event:SQLErrorEvent):void
+			{
+				trace ('6 error ' + event.text);
+			}
+			
+			
+		]]>
+	</fx:Script>
+	<s:List id="list" width="100%" height="100%" dataProvider="{Copypaste.socials}" itemRenderer="socIR"/>
+	<s:HGroup horizontalAlign="center">
+		<s:Button id="addNew" label="Добавить соцсеть" click="addBtn_clickHandler(event)" icon="images/add.png"/>
+		<s:Button id="saveBtn" label="Сохранить" click="saveBtn_clickHandler(event)" icon="images/dark-green-circle.png"/>
+	</s:HGroup>
+</s:TitleWindow>

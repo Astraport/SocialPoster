@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" title="Настройки"
+			   close="closeBtn_clickHandler(event)" creationComplete="titlewindow1_creationCompleteHandler(event)">
+	<s:layout>
+		<s:VerticalLayout horizontalAlign="center" verticalAlign="middle" padding="10" gap="10"/>
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.events.ItemClickEvent;
+			import mx.events.ResizeEvent;
+			import mx.managers.PopUpManager;
+			
+			import spark.components.Alert;
+			import spark.components.WindowedApplication;
+			private var selectStmt:SQLStatement;
+						
+			protected function closeBtn_clickHandler(event:CloseEvent):void
+			{
+				PopUpManager.removePopUp(this);
+			}
+			
+			protected function titlewindow1_creationCompleteHandler(event:FlexEvent):void
+			{
+				this.width = this.parent.width;
+				this.height = this.parent.height;
+			}
+			
+			
+			protected function socBtn_clickHandler(event:MouseEvent):void
+			{
+				var socWindow:Socials = new Socials();
+				PopUpManager.removePopUp(this);
+				PopUpManager.addPopUp(socWindow, this, true);
+			}
+			
+			protected function resBtn_clickHandler(event:MouseEvent):void
+			{
+				var resWindow:Resources = new Resources();
+				PopUpManager.removePopUp(this);
+				PopUpManager.addPopUp(resWindow, this, true);
+			}
+			
+			protected function planBtn_clickHandler(event:MouseEvent):void
+			{
+				Copypaste.planPublish = plan.selected;
+				Copypaste.setOptions("planning", Copypaste.planPublish);
+			}
+		]]>
+	</fx:Script>
+	<s:Label text="Список соц. сетей. Удаляйте не нужные. Добавляйте свои соц. сети и определяйте к ним иконки для удобства работы." width="100%" textAlign="center"/>
+	<s:Button id="socBtn" label="Социальные сети" click="socBtn_clickHandler(event)" width="50%" height="100%" fontSize="16" fontWeight="bold"/>
+	<s:Label text="Список рексурсов: аккаунты, группы, паблики, страницы. Вводите ссылку на ресурс, задаете тематику, если нужно теги через разделитель #, минимальное и максимальное количество тегов при публикации." width="100%" textAlign="center"/>
+	<s:Button id="resBtn" label="Ресурсы" click="resBtn_clickHandler(event)" width="50%" height="100%" fontSize="16" fontWeight="bold"/>
+	<s:CheckBox id="plan" label="Включить планирование" click="planBtn_clickHandler(event)" selected="{Copypaste.planPublish}"/>
+</s:TitleWindow>

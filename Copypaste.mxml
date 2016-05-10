@@ -1,0 +1,560 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 
+					   xmlns:mx="library://ns.adobe.com/flex/mx" creationComplete="windowedapplication1_creationCompleteHandler(event)"
+					   width="1200" height="400" alwaysInFront="true" title="Social Copy v0.4" closing="windowedapplication1_closeHandler(event)">
+	<s:layout>
+		<s:VerticalLayout verticalAlign="middle" padding="10"/>
+	</s:layout>
+		<fx:Style>
+		.myFontStyle { 
+			fontSize: 15;
+			color: #9933FF;
+		}
+	</fx:Style>
+	<fx:Script>
+		<![CDATA[
+			import flash.net.navigateToURL;
+			import flash.utils.setTimeout;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.AIREvent;
+			import mx.events.DragEvent;
+			import mx.events.FlexEvent;
+			import mx.events.ItemClickEvent;
+			import mx.events.ResizeEvent;
+			import mx.managers.PopUpManager;
+			
+			import spark.collections.Sort;
+			import spark.collections.SortField;
+			import spark.components.Alert;
+			import spark.components.TitleWindow;
+			
+			[Bindable]
+			public static var posts:ArrayCollection;
+			[Bindable]
+			public static var resources:ArrayCollection ;
+			[Bindable]
+			public static var socials:ArrayCollection;
+			[Bindable]
+			public static var socialIcons:ArrayCollection;
+			[Bindable]
+			public static var planner:ArrayCollection;
+			
+			[Bindable]
+			public static var planPublish:Boolean = true;
+			[Bindable]
+			public static var startMonitor:Boolean = true;
+			
+			public static var socSelected:Array = new Array();
+			
+			[Bindable]
+			private var dragit:Boolean = false;
+			
+			private var lastString:String;
+			private var lastText:String;
+			private var appStarted:Boolean = false;
+			private var textAreaDrag:Boolean = false;
+			private var instrWindow:TitleWindow;
+			private var exitWindow:Exit;
+			private var havePopup:Boolean = false;
+			private var startDragIndex:int;
+			private var stopDragIndex:int;
+			private var saved:Boolean = true;
+			public static var loadData:LoadData;
+			private var selectStmt:SQLStatement;
+			private var exitApp:Boolean = false;
+			
+			
+			protected function windowedapplication1_creationCompleteHandler(event:FlexEvent):void
+			{
+				trace(File.applicationDirectory.nativePath)
+				status = "Загрузка данных...";
+				this.statusText.setStyle("fontSize",14);
+				list.addEventListener(ItemClickEvent.ITEM_CLICK, lst_itemClickHandler);
+				getData();
+			}
+			
+			private function getData():void
+			{
+				posts = new ArrayCollection();
+				resources = new ArrayCollection();
+				socials = new ArrayCollection();
+				socialIcons = new ArrayCollection();
+				planner = new ArrayCollection();
+				loadData = new LoadData();
+				loadData.addEventListener("complete", dataLoaded);
+				loadData.start();
+			}
+			
+			protected function dataLoaded(event:Event):void
+			{
+				list.dataProvider = posts;
+				status = "Загружено.";
+				if (!startMonitor) {
+					status += " Нажмите ► для начала мониторинга буфера обмена.";
+				} else if (!planPublish) {
+					status += " Планирование постинга постов отключено.";
+				}
+				checkBuffer();
+				checkPlanner();
+				
+			}
+			
+			protected function lst_itemClickHandler(evt:ItemClickEvent):void {
+				//trace ('evt.label ' + evt.label + 'evt.index ' + evt.index);
+				if (evt.label == 'soc') {
+					//socSelected[evt.index] = evt.item;
+					//var obj:Object = posts.getItemAt(evt.index);
+					//trace (list.selectedIndex + " - " + evt.index + " - " + evt.item);
+					var obj:PostData = posts.getItemAt(list.selectedIndex) as PostData;
+					obj.socials = evt.item as Vector.<int>;
+					//obj.socials = evt.item.str;
+					return;
+				}
+				if (evt.label == 'res') {
+					//trace (evt.item);
+					var objRes:PostData = posts.getItemAt(list.selectedIndex) as PostData;
+					objRes.res = evt.item.toString();
+					return;
+				}
+				if (evt.label == 'mousedown') {
+					dragit = false;
+					return;
+				}
+				if (evt.label == 'mouseup') {
+					dragit = true;
+					return;
+				}
+				if (evt.label == 'true') {
+					deleteRow(evt.item);
+					return;
+				}
+				if (evt.label == 'image') {
+					searchImage (evt.item);
+					return;
+				}
+				if (evt.label == 'postnow') {
+					objRes= posts.getItemAt(list.selectedIndex) as PostData;
+					objRes.prior = 1;
+					saveAll();
+					return;
+				}
+				if (evt.label == 'drag') {
+					textAreaDrag = true;
+					return;
+				}
+				if (evt.label == 'needsave') {
+					saveBtn.label = "Сохранить";
+					saveBtn.setStyle("icon", "images/dark-red-circle.png");
+					saved = false;
+					return;
+				}
+			}
+			
+			private function checkPlanner():void
+			{
+				trace (planPublish + " = " + new Date().hours + " = " + new Date().minutes);
+				if (!planPublish){
+					return;
+				}
+				for (var i:int = 0; i < planner.length; i++) 
+				{
+					var obj:PlanData = planner.getItemAt(i) as PlanData;
+					var date:Date = new Date();
+					if (obj.hour == date.hours) {
+						if ((date.minutes - obj.min) < 6 && (date.minutes - obj.min) > 0) {
+							trace ("start post");
+							startNow();
+							status = "Верхний пост отправлен на публикацию и будет удален после успешной публикации. Количество постов в очереди " + String(posts.length - 1);
+						}
+					}
+				}
+				
+				
+				setTimeout(checkPlanner, 300000);
+			}
+			
+			private function checkBuffer():void
+			{
+				if (!startMonitor){
+					return;
+				}
+				if(!appStarted) {
+					appStarted = true;
+					Clipboard.generalClipboard.clear();
+					setTimeout(checkBuffer, 3000);
+					return;
+				}
+				if (Clipboard.generalClipboard.hasFormat(ClipboardFormats.TEXT_FORMAT)){ 
+					var text:String = String(Clipboard.generalClipboard.getData(ClipboardFormats.TEXT_FORMAT)); 
+					//trace ('text ' + text);
+				} else if (Clipboard.generalClipboard.hasFormat(ClipboardFormats.HTML_FORMAT)){ 
+					text = String(Clipboard.generalClipboard.getData(ClipboardFormats.HTML_FORMAT)); 
+					//trace ('html ' + text);
+				} else if (Clipboard.generalClipboard.hasFormat(ClipboardFormats.URL_FORMAT)){ 
+					text = String(Clipboard.generalClipboard.getData(ClipboardFormats.URL_FORMAT)); 
+				} 
+				//trace ('text ' + text);
+				if (lastString != text) {
+					if (!text) {
+						return;
+					}
+					var ext:String = getExtension(text);
+					if (ext == "jpg" || ext == "jpeg" || ext == "png" || ext == "gif") {
+						var obj:PostData = new PostData();
+						obj.text = lastText;
+						obj.image = text;
+						obj.socials = new Vector.<int>();
+						posts.addItemAt(obj, 0);
+						socSelected.push({});
+						lastText = "";
+						status = "Скопирована картинка. Добавлен пост. Количество постов в очереди " + posts.length;;
+						saveBtn.label = "Сохранить";
+						saveBtn.setStyle("icon", "images/dark-red-circle.png");
+						saved = false;
+					} else {
+						if (text.substr(0,4) == "http") {
+							status = "Добавлен пост с ссылкой. Количество постов в очереди " + posts.length;
+							obj = new PostData();
+							obj.text = text;
+							obj.url = text;
+							obj.image = "images/noimage.png";
+							obj.socials = new Vector.<int>();
+							posts.addItemAt(obj, 0);
+							socSelected.push({});
+							saveBtn.label = "Сохранить";
+							saveBtn.setStyle("icon", "images/dark-red-circle.png");
+							saved = false;
+						} else {
+							status = "Скопирован текст. Ожидаем картинку или сохраняем кнопкой.";
+							lastText = text;
+							//listDP.addItemAt({text:text, image:"images/No_Image_Available.png", time: new Date().time}, 0);
+						}
+						checkPosts();
+					}
+					list.selectedIndex = 0;
+					//arrayCollectionSort(listDP, "time", true);
+					//parseUrl();
+					lastString = text;
+				}
+				setTimeout(checkBuffer, 3000);
+			}
+			
+			
+			private function getExtension(url:String):String
+			{
+				var extension:String = url.substring(url.lastIndexOf(".")+1, url.length);
+				return extension;
+			}
+			
+			private function deleteRow(item:Object):void
+			{
+				
+				var selectStmt:SQLStatement = new SQLStatement();
+				selectStmt.sqlConnection = loadData.conn;
+				selectStmt.text = "DELETE FROM `main` WHERE `uid` = '" + item.uid + "'";
+				selectStmt.execute();
+				
+				posts.removeItem(item);
+				status = "Удалено. Количество постов в очереди " + posts.length;
+				checkPosts();
+			}
+			
+			
+			protected function windowedapplication1_applicationActivateHandler(event:AIREvent):void
+			{
+				trace ("sss");
+			}
+			
+			
+			protected function button1_clickHandler(event:MouseEvent):void
+			{
+				if (Clipboard.generalClipboard.getData(ClipboardFormats.TEXT_FORMAT)) {
+					status = "Добавлен чисто текстовый пост. Количество постов в очереди " + posts.length;
+					var obj:PostData = new PostData();
+					obj.socials = new Vector.<int>();
+					obj.text = String(Clipboard.generalClipboard.getData(ClipboardFormats.TEXT_FORMAT));
+					obj.image = "images/noimage.png";
+					posts.addItemAt(obj, 0);
+					socSelected.push({});
+					saveBtn.label = "Сохранить";
+					saveBtn.setStyle("icon", "images/dark-red-circle.png");
+					saved = false;
+				} else {
+					status = "В буфере пусто.";
+				}
+				checkPosts();
+			}
+			
+			public static function arrayCollectionSort(ar:ArrayCollection, fieldName:String, isNumeric:Boolean):void 
+			{
+				var dataSortField:SortField = new SortField();
+				dataSortField.name = fieldName;
+				dataSortField.numeric = isNumeric;
+				var numericDataSort:Sort = new Sort();
+				numericDataSort.fields = [dataSortField];
+				ar.sort = numericDataSort;
+				ar.refresh();
+			}
+			
+			private function searchImage(item:Object):void
+			{
+				navigateToURL(new URLRequest("https://www.google.no/searchbyimage?client=safari&rls=en&site=search&image_url=" + item.image + "&sa=X"));
+			}
+			
+			
+			
+			protected function openInstr(event:MouseEvent):void
+			{
+				instrWindow = new Instruction();
+				PopUpManager.addPopUp(instrWindow, this, true);
+			}
+			
+			protected function windowedapplication1_closeHandler(event:Event):void
+			{
+				if (havePopup) { return; }
+				
+				
+				if (!saved) {
+					event.preventDefault();
+					exitWindow = new Exit();
+					exitWindow.addEventListener("save", saveWhenExit);
+					exitWindow.addEventListener("exit", exitWhenExit);
+					exitWindow.addEventListener("cancel", cancelWhenExit);
+					PopUpManager.addPopUp(exitWindow, this, true);
+					PopUpManager.centerPopUp(exitWindow);
+					havePopup = true;
+				} 
+			}
+			
+			protected function saveWhenExit(event:Event):void
+			{
+				saveclickHandler(null);
+				exitApp = true;
+				
+			}
+			
+			protected function exitWhenExit(event:Event):void
+			{
+				this.close();
+			}
+			
+			protected function cancelWhenExit(event:Event):void
+			{
+				exitWindow.removeEventListener("save", saveWhenExit);
+				exitWindow.removeEventListener("exit", exitWhenExit);
+				exitWindow.removeEventListener("cancel", cancelWhenExit);
+				PopUpManager.removePopUp(exitWindow);
+				havePopup = false;
+			}
+			
+			protected function saveclickHandler(event:MouseEvent):void
+			{
+				saveAll();
+			}
+			
+			private function saveAll():void
+			{
+				for (var i:int = Copypaste.posts.length-1; i >= 0; i--) 
+				{
+					var item:PostData= posts.getItemAt(i) as PostData;
+					if (!item.res) {
+						Alert.show("Для некотрых постов не определен ресурс для публикации. Определите ресурсы для постов.", "Ошибка");
+						return;
+					} 
+				}
+				
+				selectStmt = new SQLStatement();
+				selectStmt.sqlConnection = loadData.conn;
+				var sql:String = "DELETE FROM main";
+				selectStmt.text = sql;
+				selectStmt.addEventListener(SQLEvent.RESULT, selectRes);
+				selectStmt.addEventListener(SQLErrorEvent.ERROR, selectError);
+				selectStmt.execute();
+			}
+			
+			protected function selectRes(event:SQLEvent):void
+			{
+				selectStmt.removeEventListener(SQLEvent.RESULT, selectRes);
+				selectStmt.removeEventListener(SQLErrorEvent.ERROR, selectError);
+				for (var i:int = posts.length-1; i >= 0; i--) 
+				{
+					var item:PostData= posts.getItemAt(i) as PostData;
+					selectStmt = new SQLStatement();
+					selectStmt.sqlConnection = loadData.conn;
+					var sql:String = "";
+					item.uid = GUID.create();
+					sql += "INSERT INTO main (sort, uid, socials, res, text, image, url, prior, tags) VALUES ('";
+					sql += i + "', '";
+					sql += item.uid + "', '";
+					sql += item.socials + "', '";
+					sql += item.res + "', '";
+					sql += item.text + "', '";
+					sql += item.image  + "', '";
+					sql += item.url + "', '";
+					sql += item.prior + "', '";
+					sql += item.tags + "')";
+					
+					trace ("sql " + sql);
+					selectStmt.text = sql;
+					selectStmt.addEventListener(SQLEvent.RESULT, selectResult2);
+					selectStmt.addEventListener(SQLErrorEvent.ERROR, selectError);
+					selectStmt.execute();
+					
+					saveBtn.label = "Сохранено";
+					
+					saveBtn.setStyle("icon", "images/dark-green-circle.png");
+					saved = true;
+					if (item.prior == 1) {
+						startNow();
+					}
+				}
+				if (exitApp) {
+					this.close();
+				}
+			}
+			
+			protected function selectResult2(event:SQLEvent):void
+			{
+				status = "Сохранено. Количество постов в очереди " + posts.length;
+				checkPosts();
+			}
+			
+			private function onDragStart(event:DragEvent):void {
+				if (textAreaDrag) {
+					event.stopImmediatePropagation();
+					textAreaDrag = false;
+				}
+				startDragIndex = list.selectedIndex;
+				status = "Перетаскиваем пост в нужное место для правильного порядка публикации.";
+				
+			}
+			
+			protected function list_dragCompleteHandler(event:DragEvent):void
+			{
+				saveBtn.label = "Сохранить";
+				saveBtn.setStyle("icon", "images/dark-red-circle.png");
+				saved = false;
+				 stopDragIndex = list.selectedIndex;
+				 if (stopDragIndex != startDragIndex) {
+					 trace ("drag");
+					var objStart:Object = socSelected[startDragIndex];
+					var objStop:Object = socSelected[stopDragIndex];
+					socSelected[startDragIndex] = objStop;
+					socSelected[stopDragIndex] = objStart;
+					var item:Object = posts.getItemAt(startDragIndex);
+					posts.addItemAt(item, stopDragIndex);
+					posts.removeItem(item);
+				} 
+				 posts.refresh(); 
+				status = "Пост перемещен.";
+			}
+			
+			protected function refreshclickHandler(event:MouseEvent):void
+			{
+				getData();
+			}
+			
+			protected function orderChanges(event:MouseEvent):void
+			{
+				/* for (var i:int = 0; i < socSelected.length; i++) 
+				{
+					var ac:ArrayCollection = socSelected[i];
+					for (var j:int = 0; j < ac.length; j++) 
+					{
+						var obj:Object = ac.getItemAt(j);
+						trace (i + " - " + j + " - " + obj.selected);
+					}
+					
+				} */
+				
+				var orderWindow:Order = new Order();
+				PopUpManager.addPopUp(orderWindow, this, true);
+				PopUpManager.centerPopUp(orderWindow); 
+			}
+			
+			protected function startNow():void 
+			{
+				if(NativeProcess.isSupported)
+				{
+					var cmd:File = new File("C:\\WINDOWS\\system32\\cmd.exe"); 
+					var svn:File = new File(File.applicationDirectory.nativePath + File.separator + "postnow.bat");  
+					
+					var args:Vector.<String> = new Vector.<String>();
+					args.push("/c ", svn.nativePath);
+					var nativeProcessStartupInfo:NativeProcessStartupInfo = new NativeProcessStartupInfo();                      
+					nativeProcessStartupInfo.executable = cmd;  
+					nativeProcessStartupInfo.arguments = args;  
+					
+					var process:NativeProcess = new NativeProcess(); 
+					process.start(nativeProcessStartupInfo);  
+				} else {
+					Alert.show("Невозможно подключиться к bat-файлу. Обратитесь к разработчику.", "Ошибка");
+				}
+			}
+			protected function optclickHandler(event:MouseEvent):void
+			{
+				var optWindow:Options = new Options();
+				PopUpManager.addPopUp(optWindow, this, true);
+			}
+			protected function selectError(event:SQLErrorEvent):void
+			{
+				trace ('3 error ' + event.text);
+			}
+			
+			protected function startclickHandler(event:MouseEvent):void
+			{
+				startMonitor = startBtn.selected;
+				setOptions ("monitoring", startMonitor);
+				if (startMonitor){
+					status = "Мониторим буфер обмена. Количество постов в очереди " + posts.length;
+					checkBuffer();
+				} else {
+					status = "Мониторинг остановлен. Количество постов в очереди " + posts.length;
+				}
+				checkPosts();
+			}
+			
+			protected function timerclickHandler(event:MouseEvent):void
+			{
+				var timeWindow:Planner= new Planner();
+				PopUpManager.addPopUp(timeWindow, this, true);
+			}
+			
+			
+			
+			private function checkPosts():void
+			{
+				if (posts.length < planner.length) {
+					status += " Запланировано постов больше чем сохранено!";
+				}
+			}
+			
+			
+			public static function setOptions (colomn:String, variable:Boolean):void
+			{
+				var selectStmt:SQLStatement = new SQLStatement();
+				selectStmt.sqlConnection = loadData.conn;
+				var value:int = variable ? 1 : 0;
+				var sql:String = "UPDATE option SET " + colomn + " = '" + value + "'";
+				selectStmt.text = sql;
+				selectStmt.execute();
+			}
+			
+		]]>
+	</fx:Script>
+	<s:HGroup width="100%" height="20" >
+		<s:ToggleButton id="startBtn" width="20%" height="20" selected="{startMonitor}" click="startclickHandler(event)" 
+						skinClass="spark.skins.spark.mediaClasses.normal.PlayPauseButtonSkin"/>
+		<s:Button id="resBtn" width="100%" height="20" label="Настройки" click="optclickHandler(event)" icon="images/options.png"/>
+		<s:Button id="saveBtn" width="100%" height="20" label="Сохранить" click="saveclickHandler(event)" icon="images/dark-green-circle.png"/>
+		<s:Button id="refreshBtn" width="100%" height="20" label="Обновить посты" click="refreshclickHandler(event)" icon="images/refresh.png"/>
+		<s:Button id="timerBtn" width="100%" height="20" label="Планировщик" click="timerclickHandler(event)" icon="images/clock.png"/>
+		<s:Button width="100%" height="20" label="Добавить текстовый пост" click="button1_clickHandler(event)" icon="images/add.png"/>
+		<s:Button width="100%" height="20" label="Инструкция" click="openInstr(event)" icon="images/info.png"/>
+		<s:Button width="100%" height="20" label="Заказ изменений" click="orderChanges(event)" icon="images/dollar.png"/>
+	</s:HGroup>
+	<s:List id="list" width="100%" height="100%" dataProvider="{posts}" itemRenderer="postIR" selectedIndex="0" dragEnabled="{dragit}" dragMoveEnabled="true" 
+			dropEnabled="true"  dragStart="onDragStart(event)" dragComplete="list_dragCompleteHandler(event)" useVirtualLayout="false"/>
+</s:WindowedApplication>

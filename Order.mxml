@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" title="Заказ изменений" 
+			   close="closeBtn_clickHandler(event)"  creationComplete="titlewindow1_creationCompleteHandler(event)">
+	<s:layout>
+		<s:VerticalLayout horizontalAlign="center" padding="10"/>
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			
+			protected function closeBtn_clickHandler(event:CloseEvent):void
+			{
+				PopUpManager.removePopUp(this);
+			}
+			
+			protected function titlewindow1_creationCompleteHandler(event:FlexEvent):void
+			{
+				this.width  = this.parent.width * 0.6;
+				this.height = this.parent.height * 0.5;
+			}
+			
+			protected function sendMail(event:MouseEvent):void
+			{
+				var request:URLRequest = new URLRequest("mailto:astraport@mail.ru?subject=SocialCopy");
+				navigateToURL(request, "_blank"); 
+				request.method = URLRequestMethod.POST;
+			}
+			
+		]]>
+	</fx:Script>
+	<s:Label text="Если вы нашли баги в программе, у вас есть предложения, вам нужна кастомная версия софта и какие-то изменения или дополнения в программе, то пишите на этот адрес:" 
+			 width="100%" height="50%" textAlign="center" verticalAlign="bottom"/>
+	<s:Button label="Написать по почте" click="sendMail(event)"/>
+	<s:Label text="Либо пишите в Skipe - astraport2012." width="100%" height="50%" textAlign="center" verticalAlign="bottom"/>
+</s:TitleWindow>
